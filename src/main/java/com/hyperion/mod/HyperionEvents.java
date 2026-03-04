@@ -28,11 +28,11 @@ public class HyperionEvents {
         ServerLevel level = player.serverLevel();
         ItemStack sword = player.getMainHandItem();
 
-        Vec3 look = player.getLookAngle();
         Vec3 playerPos = player.position();
 
-        // Use actual horizontal look direction, not snapped to cardinal
-        Vec3 flatLook = new Vec3(look.x, 0, look.z).normalize();
+        // Use yaw to get pure horizontal direction - ignores pitch completely
+        float yaw = (float) Math.toRadians(player.getYRot());
+        Vec3 flatLook = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)).normalize();
 
         Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
         Vec3 eyeTarget = eyePos.add(flatLook.scale(10));
@@ -91,8 +91,8 @@ public class HyperionEvents {
         for (Entity entity : level.getEntities(player, box)) {
             if (entity instanceof LivingEntity living) {
                 float dmg = totalDamage;
-                // Balanced +50% to withers, not 1.5x on top of 1000 base
-                if (entity instanceof WitherBoss) dmg = dmg * 0.3f + dmg * 0.3f * 0.5f; // withers get 45% of base
+                // Withers get +50% not 1500 damage
+                if (entity instanceof WitherBoss) dmg *= 1.5f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
                 living.hurt(level.damageSources().magic(), dmg);
@@ -132,7 +132,6 @@ public class HyperionEvents {
         if (!(event.getEntity() instanceof WitherBoss)) return;
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
         if (!isHyperion(player.getMainHandItem())) return;
-        // Balanced: +50% on melee hits only
         event.setAmount(event.getAmount() * 1.5f);
     }
 }
