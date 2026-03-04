@@ -13,7 +13,7 @@
     "S": { "item": "minecraft:stick" }
   },
   "result": {
-    "id": "hyperion:hyperion",
-    "count": 1
+    "count": 1,
+    "id": "hyperion:hyperion"
   }
 }
