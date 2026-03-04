@@ -17,7 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 public class HyperionItem extends FishingRodItem {
 
     public HyperionItem() {
-        super(new Properties().durability(64));
+        super(new Properties().durability(64).enchantable(22));
     }
 
     @Override
