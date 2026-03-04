@@ -2,7 +2,8 @@ package com.hyperion.mod;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
@@ -14,14 +15,21 @@ import org.slf4j.Logger;
 public class HyperionMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-        DeferredRegister.create(Registries.RECIPE_SERIALIZER, "hyperion");
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =
+        DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "hyperion");
 
-    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<HyperionRecipe>> HYPERION_RECIPE_SERIALIZER =
-        RECIPE_SERIALIZERS.register("hyperion_craft", HyperionRecipeSerializer::new);
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> HYPERION_TAB =
+        CREATIVE_TABS.register("hyperion_tab", () -> CreativeModeTab.builder()
+            .title(Component.literal("Hyperion"))
+            .icon(HyperionCommand::buildHyperionStack)
+            .displayItems((params, output) -> {
+                output.accept(HyperionCommand.buildHyperionStack());
+            })
+            .build()
+        );
 
     public HyperionMod(IEventBus modEventBus) {
-        RECIPE_SERIALIZERS.register(modEventBus);
+        CREATIVE_TABS.register(modEventBus);
         NeoForge.EVENT_BUS.register(HyperionEvents.class);
         NeoForge.EVENT_BUS.register(HyperionCommand.class);
         LOGGER.info("Hyperion mod loaded!");
