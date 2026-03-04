@@ -30,10 +30,8 @@ public class HyperionCommand {
         ItemStack stack = new ItemStack(HyperionMod.HYPERION_ITEM.get());
 
         stack.set(DataComponents.CUSTOM_NAME,
-            Component.literal("Heroic Hyperion ")
+            Component.literal("Heroic Hyperion")
                 .withStyle(Style.EMPTY.withColor(ChatFormatting.LIGHT_PURPLE).withItalic(false))
-                .append(Component.literal("✪✪✪✪✪")
-                    .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD).withItalic(false)))
         );
 
         List<Component> loreLines = List.of(
@@ -63,7 +61,10 @@ public class HyperionCommand {
                 .append(Component.literal("50%")
                     .withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withItalic(false)))
                 .append(Component.literal(" damage to Withers.")
-                    .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(false)))
+                    .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(false))),
+            Component.literal(""),
+            Component.literal("MYTHIC DUNGEON ITEM")
+                .withStyle(Style.EMPTY.withColor(ChatFormatting.LIGHT_PURPLE).withBold(true).withItalic(false))
         );
 
         stack.set(DataComponents.LORE, new ItemLore(loreLines));
