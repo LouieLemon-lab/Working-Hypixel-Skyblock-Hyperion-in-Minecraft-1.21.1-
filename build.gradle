@@ -14,17 +14,6 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir 'src/main/java'
-        }
-        resources {
-            srcDir 'src/main/resources'
-        }
-    }
-}
-
 minecraft {
     accessTransformers {
     }
