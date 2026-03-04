@@ -29,30 +29,40 @@ public class HyperionEvents {
         ItemStack sword = player.getMainHandItem();
         Vec3 playerPos = player.position();
 
-        // Pure yaw-based horizontal direction
-        float yawRad = (float) Math.toRadians(player.getYRot());
+        // getYRot() returns yaw in degrees: 0=south, 90=west, 180=north, -90=east
+        // We want the horizontal direction the player's BODY is facing, ignoring pitch entirely
+        float yawDeg = player.getYRot();
+        // Normalize to 0-360
+        yawDeg = yawDeg % 360;
+        if (yawDeg < 0) yawDeg += 360;
+        float yawRad = (float) Math.toRadians(yawDeg);
+
+        // In Minecraft: +Z is south, -Z is north, +X is east, -X is west
+        // yaw 0 = south (+Z), yaw 90 = west (-X), yaw 180 = north (-Z), yaw 270 = east (+X)
         double dx = -Math.sin(yawRad);
         double dz = Math.cos(yawRad);
+
+        HyperionMod.LOGGER.info("Wither Impact: yaw={}, dx={}, dz={}", yawDeg, dx, dz);
+
         Vec3 flatDir = new Vec3(dx, 0, dz);
 
-        // Check if there's a block within 1 block horizontally - if so, don't teleport
-        Vec3 start = playerPos.add(0, player.getEyeHeight(), 0);
-        Vec3 nearCheck = start.add(flatDir.scale(1.5));
+        // Check if there's a block within 1.5 blocks horizontally - if so, don't teleport
+        Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
+        Vec3 nearCheck = eyePos.add(flatDir.scale(1.5));
         BlockHitResult nearHit = level.clip(new ClipContext(
-            start, nearCheck,
+            eyePos, nearCheck,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
         ));
         if (nearHit.getType() == HitResult.Type.BLOCK) {
-            // Too close to a wall, don't teleport
             return;
         }
 
         // Full 10-block horizontal raycast
-        Vec3 end = start.add(flatDir.scale(10));
+        Vec3 end = eyePos.add(flatDir.scale(10));
         BlockHitResult hit = level.clip(new ClipContext(
-            start, end,
+            eyePos, end,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
@@ -68,28 +78,25 @@ public class HyperionEvents {
             destZ = playerPos.z + dz * 10;
         }
 
-        // Use pitch to decide vertical intent:
-        // Looking up (pitch < -30) = teleport 8 blocks straight up
-        // Otherwise = snap to ground at destination
+        // Pitch: negative = looking up, positive = looking down
         float pitch = player.getXRot();
         double destY;
         if (pitch < -30) {
+            // Looking up: go 8 blocks straight up
             destY = playerPos.y + 8;
         } else {
+            // Looking forward or down: snap to ground
             destY = findGroundY(level, destX, playerPos.y, destZ);
         }
 
         // Effects at origin
-        Vec3 originPos = playerPos.add(0, 1, 0);
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
-            originPos.x, originPos.y, originPos.z, 80, 0.5, 0.8, 0.5, 0.05);
+            playerPos.x, playerPos.y + 1, playerPos.z, 80, 0.5, 0.8, 0.5, 0.05);
 
-        // Teleport
         player.teleportTo(destX, destY, destZ);
 
-        // Effects at destination
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
             destX, destY + 1, destZ, 1, 0, 0, 0, 0);
         level.playSound(null, destX, destY, destZ,
@@ -124,7 +131,6 @@ public class HyperionEvents {
     }
 
     private static double findGroundY(ServerLevel level, double x, double startY, double z) {
-        // Scan down first
         for (int i = 0; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY - i, z);
             BlockPos feet = floor.above();
@@ -133,7 +139,6 @@ public class HyperionEvents {
                 return feet.getY();
             }
         }
-        // Then scan up
         for (int i = 1; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY + i, z);
             BlockPos feet = floor.above();
