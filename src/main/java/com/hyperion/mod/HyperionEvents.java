@@ -29,17 +29,28 @@ public class HyperionEvents {
         ItemStack sword = player.getMainHandItem();
         Vec3 playerPos = player.position();
 
-        // Purely horizontal direction based on yaw - identical to Aspect of the End
-        // Completely ignores pitch (looking up/down has zero effect)
+        // Pure yaw-based horizontal direction
         float yawRad = (float) Math.toRadians(player.getYRot());
         double dx = -Math.sin(yawRad);
         double dz = Math.cos(yawRad);
         Vec3 flatDir = new Vec3(dx, 0, dz);
 
-        // Raycast horizontally to check for walls
+        // Check if there's a block within 1 block horizontally - if so, don't teleport
         Vec3 start = playerPos.add(0, player.getEyeHeight(), 0);
-        Vec3 end = start.add(flatDir.scale(10));
+        Vec3 nearCheck = start.add(flatDir.scale(1.5));
+        BlockHitResult nearHit = level.clip(new ClipContext(
+            start, nearCheck,
+            ClipContext.Block.COLLIDER,
+            ClipContext.Fluid.NONE,
+            player
+        ));
+        if (nearHit.getType() == HitResult.Type.BLOCK) {
+            // Too close to a wall, don't teleport
+            return;
+        }
 
+        // Full 10-block horizontal raycast
+        Vec3 end = start.add(flatDir.scale(10));
         BlockHitResult hit = level.clip(new ClipContext(
             start, end,
             ClipContext.Block.COLLIDER,
@@ -49,7 +60,6 @@ public class HyperionEvents {
 
         double destX, destZ;
         if (hit.getType() == HitResult.Type.BLOCK) {
-            // Stop just before the wall
             Vec3 hitPos = hit.getLocation().subtract(flatDir.scale(0.6));
             destX = hitPos.x;
             destZ = hitPos.z;
@@ -58,8 +68,16 @@ public class HyperionEvents {
             destZ = playerPos.z + dz * 10;
         }
 
-        // Snap Y to ground at destination
-        double destY = findGroundY(level, destX, playerPos.y, destZ);
+        // Use pitch to decide vertical intent:
+        // Looking up (pitch < -30) = teleport 8 blocks straight up
+        // Otherwise = snap to ground at destination
+        float pitch = player.getXRot();
+        double destY;
+        if (pitch < -30) {
+            destY = playerPos.y + 8;
+        } else {
+            destY = findGroundY(level, destX, playerPos.y, destZ);
+        }
 
         // Effects at origin
         Vec3 originPos = playerPos.add(0, 1, 0);
