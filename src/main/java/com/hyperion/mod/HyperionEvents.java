@@ -8,33 +8,20 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.FluidTags;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 public class HyperionEvents {
 
     public static boolean isHyperion(ItemStack stack) {
-        if (stack.isEmpty() || stack.getItem() != Items.IRON_SWORD) return false;
-        return stack.getHoverName().getString().contains("Hyperion");
-    }
-
-    @SubscribeEvent
-    public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
-        ItemStack result = event.getCrafting();
-        if (result.isEmpty() || result.getItem() != Items.IRON_SWORD) return;
-        if (result.has(DataComponents.CUSTOM_NAME)) return;
-        result.applyComponents(HyperionCommand.buildHyperionStack().getComponents());
+        return !stack.isEmpty() && stack.getItem() instanceof HyperionItem;
     }
 
     public static void doWitherImpact(ServerPlayer player) {
@@ -44,12 +31,10 @@ public class HyperionEvents {
         Vec3 look = player.getLookAngle();
         Vec3 playerPos = player.position();
 
-        // Only use horizontal direction - ignore up/down angle
         Vec3 flatLook = new Vec3(look.x, 0, look.z).normalize();
         Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
         Vec3 eyeTarget = eyePos.add(flatLook.scale(10));
 
-        // Raycast horizontally for wall detection
         BlockHitResult hit = level.clip(new ClipContext(
             eyePos, eyeTarget,
             ClipContext.Block.COLLIDER,
@@ -57,7 +42,6 @@ public class HyperionEvents {
             player
         ));
 
-        // Get XZ destination
         double destX, destZ;
         if (hit.getType() == HitResult.Type.BLOCK) {
             Vec3 hitPos = hit.getLocation().subtract(flatLook.scale(0.6));
@@ -68,7 +52,6 @@ public class HyperionEvents {
             destZ = playerPos.z + flatLook.z * 10;
         }
 
-        // Snap Y to ground at destination
         double destY = findGroundY(level, destX, playerPos.y, destZ);
         Vec3 teleportFeet = new Vec3(destX, destY, destZ);
         Vec3 originPos = playerPos.add(0, 1, 0);
@@ -114,29 +97,20 @@ public class HyperionEvents {
         }
     }
 
-    // Scan downward from player's Y to find solid ground at destination XZ
     private static double findGroundY(ServerLevel level, double x, double startY, double z) {
-        // Scan down up to 20 blocks to find ground
         for (int i = 0; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY - i, z);
             BlockPos feet = floor.above();
             BlockPos head = floor.above(2);
-            boolean floorSolid = !level.getBlockState(floor).isAir();
-            boolean feetClear = isClear(level, feet);
-            boolean headClear = isClear(level, head);
-            if (floorSolid && feetClear && headClear) {
+            if (!level.getBlockState(floor).isAir() && isClear(level, feet) && isClear(level, head)) {
                 return feet.getY();
             }
         }
-        // Scan up if nothing below
         for (int i = 1; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY + i, z);
             BlockPos feet = floor.above();
             BlockPos head = floor.above(2);
-            boolean floorSolid = !level.getBlockState(floor).isAir();
-            boolean feetClear = isClear(level, feet);
-            boolean headClear = isClear(level, head);
-            if (floorSolid && feetClear && headClear) {
+            if (!level.getBlockState(floor).isAir() && isClear(level, feet) && isClear(level, head)) {
                 return feet.getY();
             }
         }
@@ -156,29 +130,5 @@ public class HyperionEvents {
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
         if (!isHyperion(player.getMainHandItem())) return;
         event.setAmount(event.getAmount() * 1.5f);
-    }
-
-    @SubscribeEvent
-    public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!isHyperion(event.getItemStack())) return;
-        event.setCanceled(true);
-        doWitherImpact(player);
-    }
-
-    @SubscribeEvent
-    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!isHyperion(event.getItemStack())) return;
-        event.setCanceled(true);
-        doWitherImpact(player);
-    }
-
-    @SubscribeEvent
-    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        if (!isHyperion(event.getItemStack())) return;
-        event.setCanceled(true);
-        doWitherImpact(player);
     }
 }
