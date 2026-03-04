@@ -27,18 +27,21 @@ public class HyperionEvents {
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         ItemStack sword = player.getMainHandItem();
-
         Vec3 playerPos = player.position();
 
-        // Use yaw to get pure horizontal direction - ignores pitch completely
-        float yaw = (float) Math.toRadians(player.getYRot());
-        Vec3 flatLook = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)).normalize();
+        // Purely horizontal direction based on yaw - identical to Aspect of the End
+        // Completely ignores pitch (looking up/down has zero effect)
+        float yawRad = (float) Math.toRadians(player.getYRot());
+        double dx = -Math.sin(yawRad);
+        double dz = Math.cos(yawRad);
+        Vec3 flatDir = new Vec3(dx, 0, dz);
 
-        Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
-        Vec3 eyeTarget = eyePos.add(flatLook.scale(10));
+        // Raycast horizontally to check for walls
+        Vec3 start = playerPos.add(0, player.getEyeHeight(), 0);
+        Vec3 end = start.add(flatDir.scale(10));
 
         BlockHitResult hit = level.clip(new ClipContext(
-            eyePos, eyeTarget,
+            start, end,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
@@ -46,32 +49,36 @@ public class HyperionEvents {
 
         double destX, destZ;
         if (hit.getType() == HitResult.Type.BLOCK) {
-            Vec3 hitPos = hit.getLocation().subtract(flatLook.scale(0.6));
+            // Stop just before the wall
+            Vec3 hitPos = hit.getLocation().subtract(flatDir.scale(0.6));
             destX = hitPos.x;
             destZ = hitPos.z;
         } else {
-            destX = playerPos.x + flatLook.x * 10;
-            destZ = playerPos.z + flatLook.z * 10;
+            destX = playerPos.x + dx * 10;
+            destZ = playerPos.z + dz * 10;
         }
 
+        // Snap Y to ground at destination
         double destY = findGroundY(level, destX, playerPos.y, destZ);
-        Vec3 teleportFeet = new Vec3(destX, destY, destZ);
-        Vec3 originPos = playerPos.add(0, 1, 0);
 
+        // Effects at origin
+        Vec3 originPos = playerPos.add(0, 1, 0);
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
-
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
             originPos.x, originPos.y, originPos.z, 80, 0.5, 0.8, 0.5, 0.05);
 
-        player.teleportTo(teleportFeet.x, teleportFeet.y, teleportFeet.z);
+        // Teleport
+        player.teleportTo(destX, destY, destZ);
 
+        // Effects at destination
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
-            teleportFeet.x, teleportFeet.y + 1, teleportFeet.z, 1, 0, 0, 0, 0);
-        level.playSound(null, teleportFeet.x, teleportFeet.y, teleportFeet.z,
+            destX, destY + 1, destZ, 1, 0, 0, 0, 0);
+        level.playSound(null, destX, destY, destZ,
             net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
             net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
+        // AOE damage
         float baseDamage = 1000.0f;
         int sharpness = 0, smite = 0, bane = 0;
         var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT));
@@ -86,12 +93,10 @@ public class HyperionEvents {
         float smiteBonus = smite * baseDamage * 0.25f;
         float baneBonus = bane * baseDamage * 0.25f;
 
-        AABB box = new AABB(teleportFeet.x - 8, teleportFeet.y - 8, teleportFeet.z - 8,
-                            teleportFeet.x + 8, teleportFeet.y + 8, teleportFeet.z + 8);
+        AABB box = new AABB(destX - 8, destY - 8, destZ - 8, destX + 8, destY + 8, destZ + 8);
         for (Entity entity : level.getEntities(player, box)) {
             if (entity instanceof LivingEntity living) {
                 float dmg = totalDamage;
-                // Withers get +50% not 1500 damage
                 if (entity instanceof WitherBoss) dmg *= 1.5f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
@@ -101,6 +106,7 @@ public class HyperionEvents {
     }
 
     private static double findGroundY(ServerLevel level, double x, double startY, double z) {
+        // Scan down first
         for (int i = 0; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY - i, z);
             BlockPos feet = floor.above();
@@ -109,6 +115,7 @@ public class HyperionEvents {
                 return feet.getY();
             }
         }
+        // Then scan up
         for (int i = 1; i <= 20; i++) {
             BlockPos floor = BlockPos.containing(x, startY + i, z);
             BlockPos feet = floor.above();
