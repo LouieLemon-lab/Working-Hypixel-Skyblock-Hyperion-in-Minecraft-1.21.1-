@@ -1,6 +1,5 @@
 package com.hyperion.mod;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -30,12 +29,11 @@ public class HyperionEvents {
         return stack.getHoverName().getString().contains("Hyperion");
     }
 
-    // When a plain iron sword is crafted, swap it for the real Hyperion
     @SubscribeEvent
     public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
         ItemStack result = event.getCrafting();
         if (result.isEmpty() || result.getItem() != Items.IRON_SWORD) return;
-        if (result.has(DataComponents.CUSTOM_NAME)) return; // already a Hyperion
+        if (result.has(DataComponents.CUSTOM_NAME)) return;
         result.applyComponents(HyperionCommand.buildHyperionStack().getComponents());
     }
 
@@ -44,18 +42,36 @@ public class HyperionEvents {
         ItemStack sword = player.getMainHandItem();
 
         Vec3 look = player.getLookAngle();
-        Vec3 eyePos = player.position().add(0, player.getEyeHeight(), 0);
-        Vec3 targetRaw = eyePos.add(look.scale(10));
+        Vec3 playerPos = player.position();
 
+        // Only use horizontal direction - ignore up/down angle
+        Vec3 flatLook = new Vec3(look.x, 0, look.z).normalize();
+        Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
+        Vec3 eyeTarget = eyePos.add(flatLook.scale(10));
+
+        // Raycast horizontally for wall detection
         BlockHitResult hit = level.clip(new ClipContext(
-            eyePos, targetRaw,
+            eyePos, eyeTarget,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
         ));
 
-        Vec3 teleportFeet = findSafeTeleportPos(level, player, look, hit, targetRaw);
-        Vec3 originPos = player.position().add(0, 1, 0);
+        // Get XZ destination
+        double destX, destZ;
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            Vec3 hitPos = hit.getLocation().subtract(flatLook.scale(0.6));
+            destX = hitPos.x;
+            destZ = hitPos.z;
+        } else {
+            destX = playerPos.x + flatLook.x * 10;
+            destZ = playerPos.z + flatLook.z * 10;
+        }
+
+        // Snap Y to ground at destination
+        double destY = findGroundY(level, destX, playerPos.y, destZ);
+        Vec3 teleportFeet = new Vec3(destX, destY, destZ);
+        Vec3 originPos = playerPos.add(0, 1, 0);
 
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
@@ -98,39 +114,33 @@ public class HyperionEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onLivingHurt(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof WitherBoss)) return;
-        if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
-        if (!isHyperion(player.getMainHandItem())) return;
-        event.setAmount(event.getAmount() * 1.5f);
-    }
-
-    private static Vec3 findSafeTeleportPos(ServerLevel level, ServerPlayer player, Vec3 look, BlockHitResult hit, Vec3 targetRaw) {
-        double eyeHeight = player.getEyeHeight();
-        Vec3 startPos = (hit.getType() == HitResult.Type.BLOCK) ? hit.getLocation() : targetRaw;
-
-        for (double stepBack = 0.5; stepBack <= 10.0; stepBack += 0.5) {
-            Vec3 candidate = startPos.subtract(look.scale(stepBack));
-            Vec3 candidateFeet = new Vec3(candidate.x, candidate.y - eyeHeight, candidate.z);
-            candidateFeet = pushAboveGround(level, candidateFeet);
-
-            BlockPos feet = BlockPos.containing(candidateFeet.x, candidateFeet.y, candidateFeet.z);
-            BlockPos head = BlockPos.containing(candidateFeet.x, candidateFeet.y + 1.8, candidateFeet.z);
-
-            if (isClear(level, feet) && isClear(level, head)) return candidateFeet;
-        }
-        return player.position();
-    }
-
-    private static Vec3 pushAboveGround(ServerLevel level, Vec3 pos) {
-        for (int i = 0; i < 4; i++) {
-            BlockPos bp = BlockPos.containing(pos.x, pos.y + i, pos.z);
-            if (isClear(level, bp) && isClear(level, bp.above())) {
-                return new Vec3(pos.x, pos.y + i, pos.z);
+    // Scan downward from player's Y to find solid ground at destination XZ
+    private static double findGroundY(ServerLevel level, double x, double startY, double z) {
+        // Scan down up to 20 blocks to find ground
+        for (int i = 0; i <= 20; i++) {
+            BlockPos floor = BlockPos.containing(x, startY - i, z);
+            BlockPos feet = floor.above();
+            BlockPos head = floor.above(2);
+            boolean floorSolid = !level.getBlockState(floor).isAir();
+            boolean feetClear = isClear(level, feet);
+            boolean headClear = isClear(level, head);
+            if (floorSolid && feetClear && headClear) {
+                return feet.getY();
             }
         }
-        return pos;
+        // Scan up if nothing below
+        for (int i = 1; i <= 20; i++) {
+            BlockPos floor = BlockPos.containing(x, startY + i, z);
+            BlockPos feet = floor.above();
+            BlockPos head = floor.above(2);
+            boolean floorSolid = !level.getBlockState(floor).isAir();
+            boolean feetClear = isClear(level, feet);
+            boolean headClear = isClear(level, head);
+            if (floorSolid && feetClear && headClear) {
+                return feet.getY();
+            }
+        }
+        return startY;
     }
 
     private static boolean isClear(ServerLevel level, BlockPos pos) {
@@ -138,6 +148,14 @@ public class HyperionEvents {
         return state.isAir()
             || state.getFluidState().is(FluidTags.WATER)
             || state.getFluidState().is(FluidTags.LAVA);
+    }
+
+    @SubscribeEvent
+    public static void onLivingHurt(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof WitherBoss)) return;
+        if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
+        if (!isHyperion(player.getMainHandItem())) return;
+        event.setAmount(event.getAmount() * 1.5f);
     }
 
     @SubscribeEvent
