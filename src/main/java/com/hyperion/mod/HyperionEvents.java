@@ -9,11 +9,16 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
@@ -29,49 +34,99 @@ public class HyperionEvents {
 
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
+        ItemStack sword = player.getMainHandItem();
 
         Vec3 look = player.getLookAngle();
-        Vec3 origin = player.position().add(0, player.getEyeHeight(), 0);
-        Vec3 targetRaw = origin.add(look.scale(10));
+        Vec3 eyePos = player.position().add(0, player.getEyeHeight(), 0);
+        Vec3 targetRaw = eyePos.add(look.scale(10));
 
-        // Raycast to find collision point
+        // Raycast to find first block collision
         BlockHitResult hit = level.clip(new ClipContext(
-            origin,
+            eyePos,
             targetRaw,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
         ));
 
-        Vec3 target;
+        Vec3 teleportEyePos;
         if (hit.getType() == HitResult.Type.BLOCK) {
-            // Stop just before the block
-            target = hit.getLocation().subtract(look.scale(0.5));
+            // Stop 0.6 blocks before the hit surface so player doesn't clip in
+            teleportEyePos = hit.getLocation().subtract(look.scale(0.6));
         } else {
-            target = targetRaw;
+            teleportEyePos = targetRaw;
         }
 
-        // Teleport to safe position (feet level)
-        Vec3 teleportPos = new Vec3(target.x, target.y - player.getEyeHeight(), target.z);
+        // Convert eye position to feet position
+        Vec3 teleportPos = new Vec3(teleportEyePos.x, teleportEyePos.y - player.getEyeHeight(), teleportEyePos.z);
+
+        // Check that destination feet and head positions are not inside a block
+        BlockPos feetBlock = BlockPos.containing(teleportPos.x, teleportPos.y, teleportPos.z);
+        BlockPos headBlock = BlockPos.containing(teleportPos.x, teleportPos.y + 1.8, teleportPos.z);
+
+        BlockState feetState = level.getBlockState(feetBlock);
+        BlockState headState = level.getBlockState(headBlock);
+
+        // Only teleport if destination is air, water or lava (not solid)
+        boolean feetClear = feetState.isAir() || feetState.getFluidState().is(FluidTags.WATER) || feetState.getFluidState().is(FluidTags.LAVA);
+        boolean headClear = headState.isAir() || headState.getFluidState().is(FluidTags.WATER) || headState.getFluidState().is(FluidTags.LAVA);
+
+        if (!feetClear || !headClear) {
+            // Try to find a safe spot by stepping back further
+            teleportEyePos = hit.getLocation().subtract(look.scale(1.2));
+            teleportPos = new Vec3(teleportEyePos.x, teleportEyePos.y - player.getEyeHeight(), teleportEyePos.z);
+            feetBlock = BlockPos.containing(teleportPos.x, teleportPos.y, teleportPos.z);
+            headBlock = BlockPos.containing(teleportPos.x, teleportPos.y + 1.8, teleportPos.z);
+            feetState = level.getBlockState(feetBlock);
+            headState = level.getBlockState(headBlock);
+            feetClear = feetState.isAir() || feetState.getFluidState().is(FluidTags.WATER) || feetState.getFluidState().is(FluidTags.LAVA);
+            headClear = headState.isAir() || headState.getFluidState().is(FluidTags.WATER) || headState.getFluidState().is(FluidTags.LAVA);
+
+            // If still not clear, don't teleport at all
+            if (!feetClear || !headClear) {
+                player.sendSystemMessage(Component.literal("§cNo clear space to teleport to!"));
+                return;
+            }
+        }
+
+        // Calculate bonus damage from enchantments
+        float baseDamage = 1000.0f;
+        int sharpness = 0;
+        int smite = 0;
+        int bane = 0;
+
+        // Get enchantment levels
+        var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT));
+        for (var entry : enchantments.entrySet()) {
+            String key = entry.getKey().unwrapKey().map(k -> k.location().toString()).orElse("");
+            int lvl = entry.getValue();
+            if (key.equals("minecraft:sharpness")) sharpness = lvl;
+            else if (key.equals("minecraft:smite")) smite = lvl;
+            else if (key.equals("minecraft:bane_of_arthropods")) bane = lvl;
+        }
+
+        float sharpnessBonus = sharpness * 0.5f * baseDamage * 0.1f;
+        float smiteBonus = smite * 2.5f * baseDamage * 0.1f;
+        float baneBonus = bane * 2.5f * baseDamage * 0.1f;
+        float totalDamage = baseDamage + sharpnessBonus;
+
+        Vec3 originPos = player.position().add(0, 1, 0);
 
         // Wither shield effects
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
 
-        // Origin particles + sound
+        // Origin particles only
         level.sendParticles(
             net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
-            origin.x, origin.y, origin.z,
+            originPos.x, originPos.y, originPos.z,
             80, 0.5, 0.8, 0.5, 0.05
         );
-        level.playSound(null, origin.x, origin.y, origin.z,
-            net.minecraft.sounds.SoundEvents.WITHER_AMBIENT,
-            net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.2f);
 
         // Teleport player
         player.teleportTo(teleportPos.x, teleportPos.y, teleportPos.z);
 
-        // Explosion particles + sound at destination
+        // Explosion particles + sound at destination only
         level.sendParticles(
             net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
             teleportPos.x, teleportPos.y + 1, teleportPos.z,
@@ -81,7 +136,7 @@ public class HyperionEvents {
             net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
             net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
-        // Damage nearby entities
+        // Damage nearby entities with enchant bonuses
         AABB box = new AABB(
             teleportPos.x - 8, teleportPos.y - 8, teleportPos.z - 8,
             teleportPos.x + 8, teleportPos.y + 8, teleportPos.z + 8
@@ -89,19 +144,18 @@ public class HyperionEvents {
         List<Entity> nearby = level.getEntities(player, box);
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity living) {
-                living.hurt(level.damageSources().magic(), 1000.0f);
+                float damage = totalDamage;
+                // Apply smite bonus vs undead
+                if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
+                    damage += smiteBonus;
+                }
+                // Apply bane bonus vs arthropods
+                if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) {
+                    damage += baneBonus;
+                }
+                living.hurt(level.damageSources().magic(), damage);
             }
         }
-
-        // Mana message
-        player.sendSystemMessage(Component.literal("")
-            .append(Component.literal("-250 Mana (")
-                .withStyle(s -> s.withColor(0x00AAAA)))
-            .append(Component.literal("Wither Impact")
-                .withStyle(s -> s.withColor(0xFFAA00)))
-            .append(Component.literal(")")
-                .withStyle(s -> s.withColor(0x00AAAA)))
-        );
     }
 
     @SubscribeEvent
