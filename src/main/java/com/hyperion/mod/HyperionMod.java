@@ -7,6 +7,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -40,6 +41,11 @@ public class HyperionMod {
         CREATIVE_TABS.register(modEventBus);
         NeoForge.EVENT_BUS.register(HyperionEvents.class);
         NeoForge.EVENT_BUS.register(HyperionCommand.class);
+        modEventBus.addListener(this::setup);
         LOGGER.info("Hyperion mod loaded!");
+    }
+
+    private void setup(FMLCommonSetupEvent event) {
+        LOGGER.info("Hyperion setup complete. Recipe should load from data/hyperion/recipe/hyperion_sword.json");
     }
 }
