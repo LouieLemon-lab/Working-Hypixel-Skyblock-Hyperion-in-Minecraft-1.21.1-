@@ -20,7 +20,7 @@ public class HyperionMod {
         DeferredRegister.create(Registries.ITEM, "hyperion");
 
     public static final DeferredHolder<Item, HyperionItem> HYPERION_ITEM =
-        ITEMS.register("hyperion_sword", HyperionItem::new);
+        ITEMS.register("hyperion", HyperionItem::new);
 
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =
         DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "hyperion");
