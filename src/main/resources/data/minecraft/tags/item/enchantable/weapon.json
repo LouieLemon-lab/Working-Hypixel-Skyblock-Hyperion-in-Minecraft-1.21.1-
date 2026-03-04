@@ -1,4 +1,1 @@
-{
-  "replace": false,
-  "values": ["hyperion:hyperion"]
-}
+{ "replace": false, "values": ["hyperion:hyperion"] }
