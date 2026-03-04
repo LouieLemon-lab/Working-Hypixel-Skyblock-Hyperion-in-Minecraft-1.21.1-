@@ -17,10 +17,12 @@ import net.minecraft.resources.ResourceLocation;
 public class HyperionItem extends FishingRodItem {
 
     public HyperionItem() {
-    super(new Properties().durability(64).component(
-        net.minecraft.core.component.DataComponents.ENCHANTABLE,
-        new net.minecraft.world.item.component.Enchantable(22)
-    ));
+    super(new Properties().durability(64));
+}
+
+    @Override
+    public int getEnchantmentValue() {
+        return 22;
 }
 
     @Override
