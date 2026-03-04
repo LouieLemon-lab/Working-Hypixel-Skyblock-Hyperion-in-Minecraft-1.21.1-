@@ -9,14 +9,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -28,8 +25,7 @@ public class HyperionEvents {
 
     public static boolean isHyperion(ItemStack stack) {
         if (stack.isEmpty() || stack.getItem() != Items.NETHERITE_SWORD) return false;
-        Component name = stack.getHoverName();
-        return name.getString().contains("Hyperion");
+        return stack.getHoverName().getString().contains("Hyperion");
     }
 
     public static void doWitherImpact(ServerPlayer player) {
@@ -42,60 +38,38 @@ public class HyperionEvents {
 
         // Raycast to find first block collision
         BlockHitResult hit = level.clip(new ClipContext(
-            eyePos,
-            targetRaw,
+            eyePos, targetRaw,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
         ));
 
-        Vec3 teleportEyePos;
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            // Stop 0.6 blocks before the hit surface so player doesn't clip in
-            teleportEyePos = hit.getLocation().subtract(look.scale(0.6));
-        } else {
-            teleportEyePos = targetRaw;
-        }
+        // Find the best safe teleport position by stepping back from the hit
+        Vec3 teleportFeet = findSafeTeleportPos(level, player, look, hit, targetRaw);
 
-        // Convert eye position to feet position
-        Vec3 teleportPos = new Vec3(teleportEyePos.x, teleportEyePos.y - player.getEyeHeight(), teleportEyePos.z);
+        Vec3 originPos = player.position().add(0, 1, 0);
 
-        // Check that destination feet and head positions are not inside a block
-        BlockPos feetBlock = BlockPos.containing(teleportPos.x, teleportPos.y, teleportPos.z);
-        BlockPos headBlock = BlockPos.containing(teleportPos.x, teleportPos.y + 1.8, teleportPos.z);
+        // Wither shield effects
+        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
 
-        BlockState feetState = level.getBlockState(feetBlock);
-        BlockState headState = level.getBlockState(headBlock);
+        // Origin particles
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
+            originPos.x, originPos.y, originPos.z, 80, 0.5, 0.8, 0.5, 0.05);
 
-        // Only teleport if destination is air, water or lava (not solid)
-        boolean feetClear = feetState.isAir() || feetState.getFluidState().is(FluidTags.WATER) || feetState.getFluidState().is(FluidTags.LAVA);
-        boolean headClear = headState.isAir() || headState.getFluidState().is(FluidTags.WATER) || headState.getFluidState().is(FluidTags.LAVA);
+        // Teleport player
+        player.teleportTo(teleportFeet.x, teleportFeet.y, teleportFeet.z);
 
-        if (!feetClear || !headClear) {
-            // Try to find a safe spot by stepping back further
-            teleportEyePos = hit.getLocation().subtract(look.scale(1.2));
-            teleportPos = new Vec3(teleportEyePos.x, teleportEyePos.y - player.getEyeHeight(), teleportEyePos.z);
-            feetBlock = BlockPos.containing(teleportPos.x, teleportPos.y, teleportPos.z);
-            headBlock = BlockPos.containing(teleportPos.x, teleportPos.y + 1.8, teleportPos.z);
-            feetState = level.getBlockState(feetBlock);
-            headState = level.getBlockState(headBlock);
-            feetClear = feetState.isAir() || feetState.getFluidState().is(FluidTags.WATER) || feetState.getFluidState().is(FluidTags.LAVA);
-            headClear = headState.isAir() || headState.getFluidState().is(FluidTags.WATER) || headState.getFluidState().is(FluidTags.LAVA);
+        // Explosion at destination
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
+            teleportFeet.x, teleportFeet.y + 1, teleportFeet.z, 1, 0, 0, 0, 0);
+        level.playSound(null, teleportFeet.x, teleportFeet.y, teleportFeet.z,
+            net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
+            net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
-            // If still not clear, don't teleport at all
-            if (!feetClear || !headClear) {
-                player.sendSystemMessage(Component.literal("§cNo clear space to teleport to!"));
-                return;
-            }
-        }
-
-        // Calculate bonus damage from enchantments
+        // Calculate enchant bonuses
         float baseDamage = 1000.0f;
-        int sharpness = 0;
-        int smite = 0;
-        int bane = 0;
-
-        // Get enchantment levels
+        int sharpness = 0, smite = 0, bane = 0;
         var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT));
         for (var entry : enchantments.entrySet()) {
             String key = entry.getKey().unwrapKey().map(k -> k.location().toString()).orElse("");
@@ -104,58 +78,59 @@ public class HyperionEvents {
             else if (key.equals("minecraft:smite")) smite = lvl;
             else if (key.equals("minecraft:bane_of_arthropods")) bane = lvl;
         }
-
-        float sharpnessBonus = sharpness * 0.5f * baseDamage * 0.1f;
-        float smiteBonus = smite * 2.5f * baseDamage * 0.1f;
-        float baneBonus = bane * 2.5f * baseDamage * 0.1f;
+        float sharpnessBonus = sharpness * baseDamage * 0.05f;
+        float smiteBonus = smite * baseDamage * 0.25f;
+        float baneBonus = bane * baseDamage * 0.25f;
         float totalDamage = baseDamage + sharpnessBonus;
 
-        Vec3 originPos = player.position().add(0, 1, 0);
-
-        // Wither shield effects
-        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
-
-        // Origin particles only
-        level.sendParticles(
-            net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
-            originPos.x, originPos.y, originPos.z,
-            80, 0.5, 0.8, 0.5, 0.05
-        );
-
-        // Teleport player
-        player.teleportTo(teleportPos.x, teleportPos.y, teleportPos.z);
-
-        // Explosion particles + sound at destination only
-        level.sendParticles(
-            net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
-            teleportPos.x, teleportPos.y + 1, teleportPos.z,
-            1, 0, 0, 0, 0
-        );
-        level.playSound(null, teleportPos.x, teleportPos.y, teleportPos.z,
-            net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
-            net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
-
-        // Damage nearby entities with enchant bonuses
-        AABB box = new AABB(
-            teleportPos.x - 8, teleportPos.y - 8, teleportPos.z - 8,
-            teleportPos.x + 8, teleportPos.y + 8, teleportPos.z + 8
-        );
-        List<Entity> nearby = level.getEntities(player, box);
-        for (Entity entity : nearby) {
+        // Damage nearby entities
+        AABB box = new AABB(teleportFeet.x - 8, teleportFeet.y - 8, teleportFeet.z - 8,
+                            teleportFeet.x + 8, teleportFeet.y + 8, teleportFeet.z + 8);
+        for (Entity entity : level.getEntities(player, box)) {
             if (entity instanceof LivingEntity living) {
-                float damage = totalDamage;
-                // Apply smite bonus vs undead
-                if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
-                    damage += smiteBonus;
-                }
-                // Apply bane bonus vs arthropods
-                if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) {
-                    damage += baneBonus;
-                }
-                living.hurt(level.damageSources().magic(), damage);
+                float dmg = totalDamage;
+                if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
+                if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
+                living.hurt(level.damageSources().magic(), dmg);
             }
         }
+    }
+
+    private static Vec3 findSafeTeleportPos(ServerLevel level, ServerPlayer player, Vec3 look, BlockHitResult hit, Vec3 targetRaw) {
+        double eyeHeight = player.getEyeHeight();
+
+        // If no block hit, use raw target
+        if (hit.getType() != HitResult.Type.BLOCK) {
+            return targetRaw.subtract(0, eyeHeight, 0);
+        }
+
+        // Step back from the wall in increments until we find a clear spot
+        Vec3 hitPos = hit.getLocation();
+        for (double stepBack = 0.6; stepBack <= 3.0; stepBack += 0.3) {
+            Vec3 candidate = hitPos.subtract(look.scale(stepBack));
+            Vec3 candidateFeet = candidate.subtract(0, eyeHeight, 0);
+
+            BlockPos feet = BlockPos.containing(candidateFeet.x, candidateFeet.y, candidateFeet.z);
+            BlockPos head = BlockPos.containing(candidateFeet.x, candidateFeet.y + 1.8, candidateFeet.z);
+
+            boolean feetClear = isClear(level, feet);
+            boolean headClear = isClear(level, head);
+
+            if (feetClear && headClear) {
+                return candidateFeet;
+            }
+        }
+
+        // Last resort: just stay close to where the player aimed but nudged back
+        Vec3 fallback = hitPos.subtract(look.scale(1.5)).subtract(0, eyeHeight, 0);
+        return fallback;
+    }
+
+    private static boolean isClear(ServerLevel level, BlockPos pos) {
+        var state = level.getBlockState(pos);
+        return state.isAir()
+            || state.getFluidState().is(FluidTags.WATER)
+            || state.getFluidState().is(FluidTags.LAVA);
     }
 
     @SubscribeEvent
