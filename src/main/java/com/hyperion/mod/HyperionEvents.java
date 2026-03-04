@@ -28,65 +28,32 @@ public class HyperionEvents {
         ServerLevel level = player.serverLevel();
         ItemStack sword = player.getMainHandItem();
         Vec3 playerPos = player.position();
-
-        // getYRot() returns yaw in degrees: 0=south, 90=west, 180=north, -90=east
-        // We want the horizontal direction the player's BODY is facing, ignoring pitch entirely
-        float yawDeg = player.getYRot();
-        // Normalize to 0-360
-        yawDeg = yawDeg % 360;
-        if (yawDeg < 0) yawDeg += 360;
-        float yawRad = (float) Math.toRadians(yawDeg);
-
-        // In Minecraft: +Z is south, -Z is north, +X is east, -X is west
-        // yaw 0 = south (+Z), yaw 90 = west (-X), yaw 180 = north (-Z), yaw 270 = east (+X)
-        double dx = -Math.sin(yawRad);
-        double dz = Math.cos(yawRad);
-
-        HyperionMod.LOGGER.info("Wither Impact: yaw={}, dx={}, dz={}", yawDeg, dx, dz);
-
-        Vec3 flatDir = new Vec3(dx, 0, dz);
-
-        // Check if there's a block within 1.5 blocks horizontally - if so, don't teleport
         Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
-        Vec3 nearCheck = eyePos.add(flatDir.scale(1.5));
-        BlockHitResult nearHit = level.clip(new ClipContext(
-            eyePos, nearCheck,
-            ClipContext.Block.COLLIDER,
-            ClipContext.Fluid.NONE,
-            player
-        ));
-        if (nearHit.getType() == HitResult.Type.BLOCK) {
-            return;
-        }
 
-        // Full 10-block horizontal raycast
-        Vec3 end = eyePos.add(flatDir.scale(10));
-        BlockHitResult hit = level.clip(new ClipContext(
-            eyePos, end,
+        // Raycast in exact look direction
+        Vec3 lookDir = player.getLookAngle();
+        Vec3 lookEnd = eyePos.add(lookDir.scale(10));
+        BlockHitResult lookHit = level.clip(new ClipContext(
+            eyePos, lookEnd,
             ClipContext.Block.COLLIDER,
             ClipContext.Fluid.NONE,
             player
         ));
 
-        double destX, destZ;
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            Vec3 hitPos = hit.getLocation().subtract(flatDir.scale(0.6));
-            destX = hitPos.x;
-            destZ = hitPos.z;
-        } else {
-            destX = playerPos.x + dx * 10;
-            destZ = playerPos.z + dz * 10;
-        }
+        double finalX, finalY, finalZ;
 
-        // Pitch: negative = looking up, positive = looking down
-        float pitch = player.getXRot();
-        double destY;
-        if (pitch < -30) {
-            // Looking up: go 8 blocks straight up
-            destY = playerPos.y + 8;
+        if (lookHit.getType() == HitResult.Type.BLOCK) {
+            // Looking at a block - place on top of it, centered
+            BlockPos hitBlock = lookHit.getBlockPos();
+            finalX = hitBlock.getX() + 0.5;
+            finalZ = hitBlock.getZ() + 0.5;
+            finalY = hitBlock.getY() + 1.0;
         } else {
-            // Looking forward or down: snap to ground
-            destY = findGroundY(level, destX, playerPos.y, destZ);
+            // Looking at air/sky - go to that air block, 8 higher
+            BlockPos airBlock = BlockPos.containing(lookEnd);
+            finalX = airBlock.getX() + 0.5;
+            finalZ = airBlock.getZ() + 0.5;
+            finalY = airBlock.getY() + 1.0 + 8;
         }
 
         // Effects at origin
@@ -95,16 +62,16 @@ public class HyperionEvents {
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
             playerPos.x, playerPos.y + 1, playerPos.z, 80, 0.5, 0.8, 0.5, 0.05);
 
-        player.teleportTo(destX, destY, destZ);
+        player.teleportTo(finalX, finalY, finalZ);
 
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
-            destX, destY + 1, destZ, 1, 0, 0, 0, 0);
-        level.playSound(null, destX, destY, destZ,
+            finalX, finalY + 1, finalZ, 1, 0, 0, 0, 0);
+        level.playSound(null, finalX, finalY, finalZ,
             net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
             net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
         // AOE damage
-        float baseDamage = 1000.0f;
+        float baseDamage = 25.0f;
         int sharpness = 0, smite = 0, bane = 0;
         var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT));
         for (var entry : enchantments.entrySet()) {
@@ -118,7 +85,7 @@ public class HyperionEvents {
         float smiteBonus = smite * baseDamage * 0.25f;
         float baneBonus = bane * baseDamage * 0.25f;
 
-        AABB box = new AABB(destX - 8, destY - 8, destZ - 8, destX + 8, destY + 8, destZ + 8);
+        AABB box = new AABB(finalX - 8, finalY - 8, finalZ - 8, finalX + 8, finalY + 8, finalZ + 8);
         for (Entity entity : level.getEntities(player, box)) {
             if (entity instanceof LivingEntity living) {
                 float dmg = totalDamage;
@@ -128,33 +95,6 @@ public class HyperionEvents {
                 living.hurt(level.damageSources().magic(), dmg);
             }
         }
-    }
-
-    private static double findGroundY(ServerLevel level, double x, double startY, double z) {
-        for (int i = 0; i <= 20; i++) {
-            BlockPos floor = BlockPos.containing(x, startY - i, z);
-            BlockPos feet = floor.above();
-            BlockPos head = floor.above(2);
-            if (!level.getBlockState(floor).isAir() && isClear(level, feet) && isClear(level, head)) {
-                return feet.getY();
-            }
-        }
-        for (int i = 1; i <= 20; i++) {
-            BlockPos floor = BlockPos.containing(x, startY + i, z);
-            BlockPos feet = floor.above();
-            BlockPos head = floor.above(2);
-            if (!level.getBlockState(floor).isAir() && isClear(level, feet) && isClear(level, head)) {
-                return feet.getY();
-            }
-        }
-        return startY;
-    }
-
-    private static boolean isClear(ServerLevel level, BlockPos pos) {
-        var state = level.getBlockState(pos);
-        return state.isAir()
-            || state.getFluidState().is(FluidTags.WATER)
-            || state.getFluidState().is(FluidTags.LAVA);
     }
 
     @SubscribeEvent
