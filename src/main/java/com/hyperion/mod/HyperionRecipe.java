@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 
 public class HyperionRecipe extends CustomRecipe {
@@ -23,10 +24,6 @@ public class HyperionRecipe extends CustomRecipe {
         return stack.getHoverName().getString().contains("Necron");
     }
 
-    // Necron's Handle recipe:
-    // D * D
-    // D X D
-    // D * D
     private boolean matchesNecronHandle(CraftingInput c) {
         if (c.width() < 3 || c.height() < 3) return false;
         return c.getItem(0).is(Items.DIAMOND)
@@ -40,10 +37,6 @@ public class HyperionRecipe extends CustomRecipe {
             && c.getItem(8).is(Items.DIAMOND);
     }
 
-    // Hyperion recipe:
-    // _ E _
-    // _ E _
-    // _ H _
     private boolean matchesHyperion(CraftingInput c) {
         if (c.width() < 3 || c.height() < 3) return false;
         return c.getItem(0).isEmpty()
@@ -63,7 +56,7 @@ public class HyperionRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingInput container, net.minecraft.core.RegistryAccess registryAccess) {
+    public ItemStack assemble(CraftingInput container, HolderLookup.Provider registries) {
         if (matchesNecronHandle(container)) return buildNecronHandle();
         if (matchesHyperion(container)) return HyperionCommand.buildHyperionStack();
         return ItemStack.EMPTY;
