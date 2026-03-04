@@ -37,7 +37,7 @@ public class HyperionCommand {
     private static int giveHyperion(CommandContext<CommandSourceStack> ctx) {
         try {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
-            ItemStack stack = new ItemStack(Items.FISHING_ROD);
+            ItemStack stack = new ItemStack(Items.NETHERITE_SWORD);
 
             // Custom name
             stack.set(DataComponents.CUSTOM_NAME,
@@ -118,7 +118,7 @@ public class HyperionCommand {
                 Attributes.ATTACK_DAMAGE,
                 new AttributeModifier(
                     ResourceLocation.fromNamespaceAndPath("hyperion", "dmg"),
-                    1000.0,
+                    40.0,
                     AttributeModifier.Operation.ADD_VALUE
                 ),
                 EquipmentSlotGroup.MAINHAND
