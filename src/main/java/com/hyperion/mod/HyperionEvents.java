@@ -11,6 +11,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
@@ -19,7 +22,7 @@ import java.util.List;
 public class HyperionEvents {
 
     public static boolean isHyperion(ItemStack stack) {
-        if (stack.isEmpty() || stack.getItem() != Items.FISHING_ROD) return false;
+        if (stack.isEmpty() || stack.getItem() != Items.NETHERITE_SWORD) return false;
         Component name = stack.getHoverName();
         return name.getString().contains("Hyperion");
     }
@@ -28,8 +31,28 @@ public class HyperionEvents {
         ServerLevel level = player.serverLevel();
 
         Vec3 look = player.getLookAngle();
-        Vec3 origin = player.position().add(0, 1, 0);
-        Vec3 target = player.position().add(look.scale(10));
+        Vec3 origin = player.position().add(0, player.getEyeHeight(), 0);
+        Vec3 targetRaw = origin.add(look.scale(10));
+
+        // Raycast to find collision point
+        BlockHitResult hit = level.clip(new ClipContext(
+            origin,
+            targetRaw,
+            ClipContext.Block.COLLIDER,
+            ClipContext.Fluid.NONE,
+            player
+        ));
+
+        Vec3 target;
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            // Stop just before the block
+            target = hit.getLocation().subtract(look.scale(0.5));
+        } else {
+            target = targetRaw;
+        }
+
+        // Teleport to safe position (feet level)
+        Vec3 teleportPos = new Vec3(target.x, target.y - player.getEyeHeight(), target.z);
 
         // Wither shield effects
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
@@ -46,21 +69,23 @@ public class HyperionEvents {
             net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.2f);
 
         // Teleport player
-        player.teleportTo(target.x, target.y, target.z);
+        player.teleportTo(teleportPos.x, teleportPos.y, teleportPos.z);
 
         // Explosion particles + sound at destination
         level.sendParticles(
             net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
-            target.x, target.y, target.z,
+            teleportPos.x, teleportPos.y + 1, teleportPos.z,
             1, 0, 0, 0, 0
         );
-        level.playSound(null, target.x, target.y, target.z,
+        level.playSound(null, teleportPos.x, teleportPos.y, teleportPos.z,
             net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
             net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
         // Damage nearby entities
-        AABB box = new AABB(target.x - 8, target.y - 8, target.z - 8,
-                            target.x + 8, target.y + 8, target.z + 8);
+        AABB box = new AABB(
+            teleportPos.x - 8, teleportPos.y - 8, teleportPos.z - 8,
+            teleportPos.x + 8, teleportPos.y + 8, teleportPos.z + 8
+        );
         List<Entity> nearby = level.getEntities(player, box);
         for (Entity entity : nearby) {
             if (entity instanceof LivingEntity living) {
