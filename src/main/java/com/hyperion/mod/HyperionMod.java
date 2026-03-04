@@ -3,7 +3,6 @@ package com.hyperion.mod;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.SimpleRecipeSerializer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
@@ -18,8 +17,33 @@ public class HyperionMod {
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
         DeferredRegister.create(Registries.RECIPE_SERIALIZER, "hyperion");
 
-    public static final DeferredHolder<RecipeSerializer<?>, SimpleRecipeSerializer<HyperionRecipe>> HYPERION_RECIPE_SERIALIZER =
-        RECIPE_SERIALIZERS.register("hyperion_craft", () -> new SimpleRecipeSerializer<>(HyperionRecipe::new));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<HyperionRecipe>> HYPERION_RECIPE_SERIALIZER =
+        RECIPE_SERIALIZERS.register("hyperion_craft", () -> new RecipeSerializer<HyperionRecipe>() {
+            @Override
+            public HyperionRecipe fromJson(net.minecraft.resources.ResourceLocation id, com.google.gson.JsonObject json) {
+                return new HyperionRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);
+            }
+            @Override
+            public HyperionRecipe fromNetwork(net.minecraft.resources.ResourceLocation id, net.minecraft.network.FriendlyByteBuf buf) {
+                return new HyperionRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);
+            }
+            @Override
+            public void toNetwork(net.minecraft.network.FriendlyByteBuf buf, HyperionRecipe recipe) {}
+
+            @Override
+            public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, HyperionRecipe> streamCodec() {
+                return net.minecraft.network.codec.StreamCodec.of(
+                    (buf, r) -> {},
+                    buf -> new HyperionRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)
+                );
+            }
+            @Override
+            public com.mojang.serialization.MapCodec<HyperionRecipe> codec() {
+                return com.mojang.serialization.MapCodec.unit(
+                    new HyperionRecipe(net.minecraft.world.item.crafting.CraftingBookCategory.MISC)
+                );
+            }
+        });
 
     public HyperionMod(IEventBus modEventBus) {
         RECIPE_SERIALIZERS.register(modEventBus);
