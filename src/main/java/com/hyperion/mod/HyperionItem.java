@@ -17,8 +17,11 @@ import net.minecraft.resources.ResourceLocation;
 public class HyperionItem extends FishingRodItem {
 
     public HyperionItem() {
-        super(new Properties().durability(64).enchantable(22));
-    }
+    super(new Properties().durability(64).component(
+        net.minecraft.core.component.DataComponents.ENCHANTABLE,
+        new net.minecraft.world.item.component.Enchantable(22)
+    ));
+}
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
