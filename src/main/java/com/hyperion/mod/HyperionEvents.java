@@ -31,7 +31,16 @@ public class HyperionEvents {
         Vec3 look = player.getLookAngle();
         Vec3 playerPos = player.position();
 
-        Vec3 flatLook = new Vec3(look.x, 0, look.z).normalize();
+        // Snap to primary horizontal direction - only teleport the way player is mainly facing
+        double ax = Math.abs(look.x);
+        double az = Math.abs(look.z);
+        Vec3 flatLook;
+        if (ax >= az) {
+            flatLook = new Vec3(Math.signum(look.x), 0, 0);
+        } else {
+            flatLook = new Vec3(0, 0, Math.signum(look.z));
+        }
+
         Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
         Vec3 eyeTarget = eyePos.add(flatLook.scale(10));
 
