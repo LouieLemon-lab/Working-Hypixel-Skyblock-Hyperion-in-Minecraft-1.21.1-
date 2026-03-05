@@ -1,13 +1,10 @@
 {
   "criteria": {
-    "enter_nether": {
-      "trigger": "minecraft:entered_block",
-      "conditions": {
-        "block": "minecraft:nether_portal"
-      }
+    "tick": {
+      "trigger": "minecraft:tick"
     }
   },
-  "requirements": [["enter_nether"]],
+  "requirements": [["tick"]],
   "rewards": {
     "recipes": ["hyperion:hyperion_sword"]
   }
