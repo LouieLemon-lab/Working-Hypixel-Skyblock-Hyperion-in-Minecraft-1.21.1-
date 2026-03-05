@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.core.Holder;
-import java.util.ArrayList;
 import java.util.List;
 
 public class HyperionItem extends SwordItem {
@@ -34,10 +33,9 @@ public class HyperionItem extends SwordItem {
     }
 
     @Override
-    public List<Component> getTooltipLines(ItemStack stack, TooltipContext context, TooltipFlag tooltipFlag) {
-        List<Component> tooltip = new ArrayList<>();
-
-        tooltip.add(stack.getHoverName());
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipData, TooltipFlag tooltipFlag) {
+        // Clear any tooltip added by parent
+        tooltipData.clear();
 
         var registryAccess = context.registries();
         if (registryAccess != null) {
@@ -46,29 +44,27 @@ public class HyperionItem extends SwordItem {
                 for (var entry : enchantments.entrySet()) {
                     Holder<Enchantment> holder = entry.getKey();
                     int level = entry.getValue();
-                    tooltip.add(Enchantment.getFullname(holder, level).copy().withStyle(ChatFormatting.BLUE));
+                    tooltipData.add(Enchantment.getFullname(holder, level).copy().withStyle(ChatFormatting.BLUE));
                 }
             }
         }
 
-        tooltip.add(Component.empty());
-        tooltip.add(
+        tooltipData.add(Component.empty());
+        tooltipData.add(
             Component.literal("Deals ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
             .append(Component.literal(" damage to Withers.").withStyle(ChatFormatting.GRAY)));
-        tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
-        tooltip.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
+        tooltipData.add(Component.empty());
+        tooltipData.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
+        tooltipData.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
             .append(Component.literal("RIGHT CLICK").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
-        tooltip.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
+        tooltipData.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("damage").withStyle(ChatFormatting.RED))
             .append(Component.literal(" to nearby enemies. Also applies the wither shield scroll ability reducing damage taken and granting an absorption shield for ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal("5 seconds").withStyle(ChatFormatting.RED))
             .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
-        tooltip.add(Component.empty());
-        tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
-
-        return tooltip;
+        tooltipData.add(Component.empty());
+        tooltipData.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
     }
 
     @Override
