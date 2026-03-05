@@ -11,7 +11,11 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.core.Holder;
 import java.util.List;
+import java.util.Map;
 
 public class HyperionItem extends FishingRodItem {
     public HyperionItem() {
@@ -30,7 +34,18 @@ public class HyperionItem extends FishingRodItem {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipData, TooltipFlag tooltipFlag) {
-        tooltipData.add(Component.empty());
+        // Manually render enchantments in blue
+        var registryAccess = context.registries();
+        if (registryAccess != null) {
+            var enchantments = stack.getAllEnchantments(registryAccess.lookupOrThrow(Registries.ENCHANTMENT));
+            if (!enchantments.isEmpty()) {
+                for (var entry : enchantments.entrySet()) {
+                    tooltipData.add(entry.getKey().value().getFullname(entry.getValue()).copy().withStyle(ChatFormatting.BLUE));
+                }
+                tooltipData.add(Component.empty());
+            }
+        }
+
         tooltipData.add(
             Component.literal("Deals ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
@@ -46,6 +61,11 @@ public class HyperionItem extends FishingRodItem {
             .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
         tooltipData.add(Component.empty());
         tooltipData.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
+    }
+
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return true;
     }
 
     @Override
