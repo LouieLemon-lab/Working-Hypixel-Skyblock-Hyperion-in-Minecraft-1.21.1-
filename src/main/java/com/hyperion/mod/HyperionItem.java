@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class HyperionItem extends FishingRodItem {
     public HyperionItem() {
-        super(new Properties().durability(64));
+    super(new Properties().durability(64).hideTooltipPart(ItemStack.TooltipPart.ENCHANTMENTS));
     }
 
     @Override
