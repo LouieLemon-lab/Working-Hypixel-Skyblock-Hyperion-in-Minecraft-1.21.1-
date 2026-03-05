@@ -1,15 +1,13 @@
 {
   "criteria": {
-    "kill_wither": {
-      "trigger": "minecraft:player_killed_entity",
+    "enter_nether": {
+      "trigger": "minecraft:entered_block",
       "conditions": {
-        "entity": {
-          "type": "minecraft:wither"
-        }
+        "block": "minecraft:nether_portal"
       }
     }
   },
-  "requirements": [["kill_wither"]],
+  "requirements": [["enter_nether"]],
   "rewards": {
     "recipes": ["hyperion:hyperion_sword"]
   }
