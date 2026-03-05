@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 public class HyperionItem extends SwordItem {
     public HyperionItem() {
         super(Tiers.NETHERITE, new Properties()
-            .durability(64)
+            .durability(2031)
             .attributes(SwordItem.createAttributes(Tiers.NETHERITE, 20, -2.4f)));
     }
 
