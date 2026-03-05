@@ -9,6 +9,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
+import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.core.Holder;
@@ -54,9 +55,12 @@ public class HyperionEvents {
         }
 
         tooltip.add(Component.literal("Deals ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
+            .append(Component.literal("+25%").withStyle(ChatFormatting.RED))
             .append(Component.literal(" damage to Withers.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
+        tooltip.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
+        tooltip.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
+            .append(Component.literal("RIGHT CLICK").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
         tooltip.add(Component.literal("Teleport ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("10 blocks").withStyle(ChatFormatting.GREEN))
             .append(Component.literal(" ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY))
@@ -68,7 +72,7 @@ public class HyperionEvents {
             .append(Component.literal("seconds.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
-        }
+    }
 
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
@@ -129,11 +133,11 @@ public class HyperionEvents {
         float smiteBonus = smite * baseDamage * 0.25f;
         float baneBonus = bane * baseDamage * 0.25f;
 
-        AABB box = new AABB(finalX - 8, finalY - 8, finalZ - 8, finalX + 8, finalY + 8, finalZ + 8);
+        AABB box = new AABB(finalX - 7, finalY - 7, finalZ - 7, finalX + 7, finalY + 7, finalZ + 7);
         for (Entity entity : level.getEntities(player, box)) {
             if (entity instanceof LivingEntity living) {
                 float dmg = totalDamage;
-                if (entity instanceof WitherBoss) dmg *= 1.5f;
+                if (entity instanceof WitherBoss || entity instanceof WitherSkeleton) dmg *= 1.25f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
                 living.hurt(level.damageSources().magic(), dmg);
@@ -143,9 +147,10 @@ public class HyperionEvents {
 
     @SubscribeEvent
     public static void onLivingHurt(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof WitherBoss)) return;
+        if (!(event.getEntity() instanceof WitherBoss) &&
+            !(event.getEntity() instanceof WitherSkeleton)) return;
         if (!(event.getSource().getEntity() instanceof ServerPlayer player)) return;
         if (!isHyperion(player.getMainHandItem())) return;
-        event.setAmount(event.getAmount() * 1.5f);
+        event.setAmount(event.getAmount() * 1.25f);
     }
 }
