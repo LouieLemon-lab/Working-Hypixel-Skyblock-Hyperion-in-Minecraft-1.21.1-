@@ -38,7 +38,8 @@ public class HyperionEvents {
         List<Component> tooltip = event.getToolTip();
         tooltip.clear();
 
-        tooltip.add(0, stack.getHoverName());
+        tooltip.add(stack.getHoverName());
+        tooltip.add(Component.empty());
 
         if (event.getEntity() != null) {
             var enchantments = stack.getAllEnchantments(event.getEntity().registryAccess().lookupOrThrow(Registries.ENCHANTMENT));
@@ -48,10 +49,10 @@ public class HyperionEvents {
                     int level = entry.getValue();
                     tooltip.add(Enchantment.getFullname(holder, level).copy().withStyle(ChatFormatting.BLUE));
                 }
+                tooltip.add(Component.empty());
             }
         }
 
-        tooltip.add(Component.empty());
         tooltip.add(Component.literal("Deals ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
             .append(Component.literal(" damage to Withers.").withStyle(ChatFormatting.GRAY)));
