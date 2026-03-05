@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class HyperionItem extends FishingRodItem {
     public HyperionItem() {
-    super(new Properties().durability(64).hideTooltipPart(ItemStack.TooltipPart.ENCHANTMENTS));
+        super(new Properties().durability(64));
     }
 
     @Override
@@ -40,7 +40,9 @@ public class HyperionItem extends FishingRodItem {
             var enchantments = stack.getAllEnchantments(registryAccess.lookupOrThrow(Registries.ENCHANTMENT));
             if (!enchantments.isEmpty()) {
                 for (var entry : enchantments.entrySet()) {
-                    tooltipData.add(entry.getKey().value().getFullname(entry.getValue()).copy().withStyle(ChatFormatting.BLUE));
+                    Holder<Enchantment> holder = entry.getKey();
+                    int level = entry.getValue();
+                    tooltipData.add(Enchantment.getFullname(holder, level).copy().withStyle(ChatFormatting.BLUE));
                 }
                 tooltipData.add(Component.empty());
             }
@@ -57,23 +59,4 @@ public class HyperionItem extends FishingRodItem {
         tooltipData.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("damage").withStyle(ChatFormatting.RED))
             .append(Component.literal(" to nearby enemies. Also applies the wither shield scroll ability reducing damage taken and granting an absorption shield for ").withStyle(ChatFormatting.GRAY))
-            .append(Component.literal("5 seconds").withStyle(ChatFormatting.RED))
-            .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
-        tooltipData.add(Component.empty());
-        tooltipData.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
-    }
-
-    @Override
-    public boolean isFoil(ItemStack stack) {
-        return true;
-    }
-
-    @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (hand != InteractionHand.MAIN_HAND) return InteractionResultHolder.pass(player.getItemInHand(hand));
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            HyperionEvents.doWitherImpact(serverPlayer);
-        }
-        return InteractionResultHolder.success(player.getItemInHand(hand));
-    }
-}
+            .append(Component.literal("5 seconds").withStyle(Ch
