@@ -1,19 +1,16 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "equipment",
-  "pattern": [
-    "N*N",
-    "E*E",
-    "ESE"
-  ],
-  "key": {
-    "N": { "item": "minecraft:netherite_ingot" },
-    "E": { "item": "minecraft:ender_eye" },
-    "*": { "item": "minecraft:nether_star" },
-    "S": { "item": "minecraft:stick" }
+  "criteria": {
+    "kill_wither": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": {
+        "entity": {
+          "type": "minecraft:wither"
+        }
+      }
+    }
   },
-  "result": {
-    "count": 1,
-    "id": "hyperion:hyperion"
+  "requirements": [["kill_wither"]],
+  "rewards": {
+    "recipes": ["hyperion:hyperion_sword"]
   }
 }
