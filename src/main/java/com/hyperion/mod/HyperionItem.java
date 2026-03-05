@@ -5,7 +5,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.Item.TooltipContext;
@@ -17,9 +18,9 @@ import net.minecraft.core.Holder;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HyperionItem extends FishingRodItem {
+public class HyperionItem extends SwordItem {
     public HyperionItem() {
-        super(new Properties().durability(64));
+        super(Tiers.NETHERITE, new Properties().durability(64));
     }
 
     @Override
@@ -36,10 +37,8 @@ public class HyperionItem extends FishingRodItem {
     public List<Component> getTooltipLines(ItemStack stack, TooltipContext context, TooltipFlag tooltipFlag) {
         List<Component> tooltip = new ArrayList<>();
 
-        // Item name
         tooltip.add(stack.getHoverName());
 
-        // Enchantments in blue
         var registryAccess = context.registries();
         if (registryAccess != null) {
             var enchantments = stack.getAllEnchantments(registryAccess.lookupOrThrow(Registries.ENCHANTMENT));
