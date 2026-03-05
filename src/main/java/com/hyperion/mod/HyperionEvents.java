@@ -57,10 +57,9 @@ public class HyperionEvents {
             .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
             .append(Component.literal(" damage to Withers.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
-        tooltip.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
-            .append(Component.literal("RIGHT CLICK").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
-        tooltip.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
+        tooltip.add(Component.literal("Teleport ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal("10 blocks").withStyle(ChatFormatting.GREEN))
+            .append(Component.literal(" ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal("damage").withStyle(ChatFormatting.RED))
             .append(Component.literal(" to nearby enemies. ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal("Also applies the wither shield scroll ability reducing damage taken and granting ").withStyle(ChatFormatting.GRAY))
@@ -69,7 +68,7 @@ public class HyperionEvents {
             .append(Component.literal("seconds.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
-    }
+        }
 
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
