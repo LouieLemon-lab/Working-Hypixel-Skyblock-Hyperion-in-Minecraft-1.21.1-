@@ -49,19 +49,17 @@ public class HyperionEvents {
             finalZ = hitBlock.getZ() + 0.5;
             finalY = hitBlock.getY() + 1.0;
         } else {
-            // Looking at air/sky
-            BlockPos airBlock = BlockPos.containing(lookEnd);
-            finalX = airBlock.getX() + 0.5;
-            finalZ = airBlock.getZ() + 0.5;
-        if (player.getXRot() > 30) {
-            // Looking down at air - go 8 blocks down
-            finalY = playerPos.y - 8;
-        } else {
-            // Looking up at sky - go 8 blocks up
-            finalY = airBlock.getY() + 1.0 + 8;
-        }
-               }
-
+            // Looking at air - teleport to exact end of raycast
+            finalX = lookEnd.x;
+            finalY = lookEnd.y;
+            finalZ = lookEnd.z;
+    
+            // If looking steeply upward, clamp horizontal movement
+            if (player.getXRot() < -45) {
+            finalX = playerPos.x;
+            finalZ = playerPos.z;
+    }
+}
         // Effects at origin
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
