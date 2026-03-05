@@ -1,5 +1,7 @@
 package com.hyperion.mod;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -8,20 +10,62 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.core.Holder;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.core.BlockPos;
-import net.minecraft.tags.FluidTags;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import java.util.List;
 
 public class HyperionEvents {
 
     public static boolean isHyperion(ItemStack stack) {
         return !stack.isEmpty() && stack.getItem() instanceof HyperionItem;
+    }
+
+    @SubscribeEvent
+    public static void onItemTooltip(ItemTooltipEvent event) {
+        if (!(event.getItemStack().getItem() instanceof HyperionItem)) return;
+
+        ItemStack stack = event.getItemStack();
+        List<Component> tooltip = event.getToolTip();
+        tooltip.clear();
+
+        tooltip.add(stack.getHoverName());
+
+        if (event.getEntity() != null) {
+            var enchantments = stack.getAllEnchantments(event.getEntity().registryAccess().lookupOrThrow(Registries.ENCHANTMENT));
+            if (!enchantments.isEmpty()) {
+                for (var entry : enchantments.entrySet()) {
+                    Holder<Enchantment> holder = entry.getKey();
+                    int level = entry.getValue();
+                    tooltip.add(Enchantment.getFullname(holder, level).copy().withStyle(ChatFormatting.BLUE));
+                }
+            }
+        }
+
+        tooltip.add(Component.empty());
+        tooltip.add(Component.literal("Deals ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal("+50%").withStyle(ChatFormatting.RED))
+            .append(Component.literal(" damage to Withers.").withStyle(ChatFormatting.GRAY)));
+        tooltip.add(Component.empty());
+        tooltip.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
+        tooltip.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
+            .append(Component.literal("RIGHT CLICK").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
+        tooltip.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal("damage").withStyle(ChatFormatting.RED))
+            .append(Component.literal(" to nearby enemies. Also applies the wither shield scroll ability reducing damage taken and granting an absorption shield for ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal("5 seconds").withStyle(ChatFormatting.RED))
+            .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
+        tooltip.add(Component.empty());
+        tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
     }
 
     public static void doWitherImpact(ServerPlayer player) {
@@ -30,7 +74,6 @@ public class HyperionEvents {
         Vec3 playerPos = player.position();
         Vec3 eyePos = playerPos.add(0, player.getEyeHeight(), 0);
 
-        // Raycast in exact look direction
         Vec3 lookDir = player.getLookAngle();
         Vec3 lookEnd = eyePos.add(lookDir.scale(10));
         BlockHitResult lookHit = level.clip(new ClipContext(
@@ -43,24 +86,20 @@ public class HyperionEvents {
         double finalX, finalY, finalZ;
 
         if (lookHit.getType() == HitResult.Type.BLOCK) {
-            // Looking at a block - place on top of it, centered
             BlockPos hitBlock = lookHit.getBlockPos();
             finalX = hitBlock.getX() + 0.5;
             finalZ = hitBlock.getZ() + 0.5;
             finalY = hitBlock.getY() + 1.0;
         } else {
-            // Looking at air - teleport to exact end of raycast
             finalX = lookEnd.x;
             finalY = lookEnd.y;
             finalZ = lookEnd.z;
-    
-            // If looking steeply upward, clamp horizontal movement
             if (player.getXRot() < -45) {
-            finalX = playerPos.x;
-            finalZ = playerPos.z;
-    }
-}
-        // Effects at origin
+                finalX = playerPos.x;
+                finalZ = playerPos.z;
+            }
+        }
+
         player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 4, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 100, 4, false, false));
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.SOUL_FIRE_FLAME,
@@ -74,10 +113,9 @@ public class HyperionEvents {
             net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(),
             net.minecraft.sounds.SoundSource.MASTER, 2.0f, 0.8f);
 
-        // AOE damage
         float baseDamage = 25.0f;
         int sharpness = 0, smite = 0, bane = 0;
-        var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT));
+        var enchantments = sword.getAllEnchantments(level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT));
         for (var entry : enchantments.entrySet()) {
             String key = entry.getKey().unwrapKey().map(k -> k.location().toString()).orElse("");
             int lvl = entry.getValue();
