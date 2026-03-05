@@ -1,13 +1,15 @@
 {
   "criteria": {
-    "has_nether_star": {
-      "trigger": "minecraft:inventory_changed",
+    "kill_wither": {
+      "trigger": "minecraft:player_killed_entity",
       "conditions": {
-        "items": [{ "items": "minecraft:nether_star" }]
+        "entity": {
+          "type": "minecraft:wither"
+        }
       }
     }
   },
-  "requirements": [["has_nether_star"]],
+  "requirements": [["kill_wither"]],
   "rewards": {
     "recipes": ["hyperion:hyperion_sword"]
   }
