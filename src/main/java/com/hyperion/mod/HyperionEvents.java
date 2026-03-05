@@ -67,12 +67,12 @@ public class HyperionEvents {
         tooltip.add(Component.literal("Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("damage").withStyle(ChatFormatting.RED))
             .append(Component.literal(" to nearby enemies.").withStyle(ChatFormatting.GRAY)));
-        tooltip.add(Component.literal("Also applies ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal("Wither Shield").withStyle(ChatFormatting.DARK_PURPLE))
-            .append(Component.literal(", reducing damage taken").withStyle(ChatFormatting.GRAY)));
+        tooltip.add(Component.literal("Also applies the ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal("wither shield scroll ability, ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal("reducing damage taken").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.literal("and granting an absorption shield for ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal("5 seconds").withStyle(ChatFormatting.YELLOW))
-            .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
+            .append(Component.literal("5 ").withStyle(ChatFormatting.YELLOW))    
+            .append(Component.literal("seconds.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
     }
