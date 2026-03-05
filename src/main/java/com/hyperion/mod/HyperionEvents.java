@@ -38,7 +38,7 @@ public class HyperionEvents {
         List<Component> tooltip = event.getToolTip();
         tooltip.clear();
 
-        tooltip.add(stack.getHoverName());
+        tooltip.add(0, stack.getHoverName());
 
         if (event.getEntity() != null) {
             var enchantments = stack.getAllEnchantments(event.getEntity().registryAccess().lookupOrThrow(Registries.ENCHANTMENT));
