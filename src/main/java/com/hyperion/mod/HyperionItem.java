@@ -1,5 +1,10 @@
 package com.hyperion.mod;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.Item.TooltipContext;
+import java.util.List;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -21,8 +26,10 @@ public class HyperionItem extends FishingRodItem {
 }
 
     @Override
-    public int getEnchantmentValue() {
-        return 22;
+public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipData, TooltipFlag tooltipFlag) {
+    tooltipData.add(Component.literal("✦ Wither Impact").withStyle(ChatFormatting.DARK_PURPLE));
+    tooltipData.add(Component.literal("Right-click to unleash a devastating").withStyle(ChatFormatting.GRAY));
+    tooltipData.add(Component.literal("Wither explosion around you!").withStyle(ChatFormatting.GRAY));
 }
 
     @Override
