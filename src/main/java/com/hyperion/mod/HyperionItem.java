@@ -29,10 +29,20 @@ public class HyperionItem extends FishingRodItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipData, TooltipFlag tooltipFlag) {
-        tooltipData.add(Component.literal("✦ Wither Impact").withStyle(ChatFormatting.DARK_PURPLE));
-        tooltipData.add(Component.literal("Right-click to unleash a devastating").withStyle(ChatFormatting.GRAY));
-        tooltipData.add(Component.literal("Wither explosion around you!").withStyle(ChatFormatting.GRAY));
+public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipData, TooltipFlag tooltipFlag) {
+    tooltipData.add(Component.literal("Deals +50% damage to Withers.").withStyle(ChatFormatting.RED));
+    tooltipData.add(Component.empty());
+    tooltipData.add(Component.literal("Scroll Abilities:").withStyle(ChatFormatting.GREEN));
+    tooltipData.add(Component.literal("Item Ability: Wither Impact ").withStyle(ChatFormatting.GOLD)
+        .append(Component.literal("RIGHT CLICK").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)));
+    tooltipData.add(Component.literal("Teleport 10 blocks ahead of you. Then implode dealing ").withStyle(ChatFormatting.GRAY)
+        .append(Component.literal("25 damage").withStyle(ChatFormatting.RED))
+        .append(Component.literal(" to nearby enemies. Also applies the wither shield scroll ability reducing damage taken and granting an absorption shield for ").withStyle(ChatFormatting.GRAY))
+        .append(Component.literal("5 seconds").withStyle(ChatFormatting.RED))
+        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)));
+    tooltipData.add(Component.empty());
+    tooltipData.add(Component.literal("\u2605 MYTHIC DUNGEON ITEM \u2605").withStyle(ChatFormatting.LIGHT_PURPLE));
+}
     }
 
     @Override
