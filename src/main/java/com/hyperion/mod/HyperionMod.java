@@ -24,7 +24,7 @@ public class HyperionMod {
         ITEMS.register("hyperion", () -> new HyperionItem() {
             @Override
             public Component getName(ItemStack stack) {
-                return Component.literal("Heroic Hyperion").withStyle(ChatFormatting.LIGHT_PURPLE);
+                return Component.literal("Hyperion").withStyle(ChatFormatting.LIGHT_PURPLE);
             }
         });
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS =
