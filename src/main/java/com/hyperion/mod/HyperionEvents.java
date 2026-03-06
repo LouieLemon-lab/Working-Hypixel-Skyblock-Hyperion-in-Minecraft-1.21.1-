@@ -142,7 +142,7 @@ public class HyperionEvents {
                 if (entity instanceof WitherBoss || entity instanceof WitherSkeleton) dmg *= 1.25f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
-                living.hurt(level.damageSources().playerAttack(player), dmg);
+                living.hurt(level.damageSources().indirectMagic(player, player), dmg);
             }
         }
     }
