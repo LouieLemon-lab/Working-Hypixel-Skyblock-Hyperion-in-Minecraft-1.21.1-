@@ -67,11 +67,9 @@ public class HyperionEvents {
         tooltip.add(Component.literal("Then implode dealing a lot of ").withStyle(ChatFormatting.GRAY)
             .append(Component.literal("damage").withStyle(ChatFormatting.RED))
             .append(Component.literal(" to nearby enemies.").withStyle(ChatFormatting.GRAY)));
-        tooltip.add(Component.literal("Also applies the ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal("wither shield scroll ability, ").withStyle(ChatFormatting.GRAY))
-            .append(Component.literal("reducing damage taken").withStyle(ChatFormatting.GRAY)));
-        tooltip.add(Component.literal("and granting an absorption shield for ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal("5 ").withStyle(ChatFormatting.YELLOW))    
+        tooltip.add(Component.literal("Also applies the wither shield scroll ability,").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("reducing damage taken and granting an absorption shield for ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal("5 ").withStyle(ChatFormatting.YELLOW))
             .append(Component.literal("seconds.").withStyle(ChatFormatting.GRAY)));
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
@@ -115,6 +113,7 @@ public class HyperionEvents {
             playerPos.x, playerPos.y + 1, playerPos.z, 80, 0.5, 0.8, 0.5, 0.05);
 
         player.teleportTo(finalX, finalY, finalZ);
+        player.resetAttackStrengthTicker();
 
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
             finalX, finalY + 1, finalZ, 1, 0, 0, 0, 0);
@@ -143,7 +142,7 @@ public class HyperionEvents {
                 if (entity instanceof WitherBoss || entity instanceof WitherSkeleton) dmg *= 1.25f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
-                living.hurt(level.damageSources().magic(), dmg);
+                living.hurt(level.damageSources().playerAttack(player), dmg);
             }
         }
     }
