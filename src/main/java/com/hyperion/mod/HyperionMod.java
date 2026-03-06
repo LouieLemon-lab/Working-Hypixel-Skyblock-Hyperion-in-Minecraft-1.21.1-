@@ -32,20 +32,21 @@ public class HyperionMod {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> HYPERION_TAB =
         CREATIVE_TABS.register("hyperion_tab", () -> CreativeModeTab.builder()
             .title(Component.literal("Hyperion"))
-            .icon(() -> HyperionCommand.buildHyperionStack())
+            .icon(() -> new ItemStack(HYPERION_ITEM.get()))
             .displayItems((params, output) -> {
-                output.accept(HyperionCommand.buildHyperionStack());
+                output.accept(new ItemStack(HYPERION_ITEM.get()));
             })
             .build()
         );
+
     public HyperionMod(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
         CREATIVE_TABS.register(modEventBus);
         NeoForge.EVENT_BUS.register(HyperionEvents.class);
-        NeoForge.EVENT_BUS.register(HyperionCommand.class);
         modEventBus.addListener(this::setup);
         LOGGER.info("Hyperion mod loaded!");
     }
+
     private void setup(FMLCommonSetupEvent event) {
         LOGGER.info("Hyperion setup complete.");
     }
