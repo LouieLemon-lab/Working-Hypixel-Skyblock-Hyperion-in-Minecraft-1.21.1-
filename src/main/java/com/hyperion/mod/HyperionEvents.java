@@ -109,8 +109,8 @@ public class HyperionEvents {
                 finalY = hitBlock.getY() + 1.0;
             } else {
                 // Hit a side face - stand in front of it
-                finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 0.6;
-                finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 0.6;
+                finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
+                finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                 finalY = lookHit.getLocation().y;
             }
         } else {
