@@ -87,12 +87,21 @@ public class HyperionEvents {
     }
 
     private static boolean isSafeDestination(ServerLevel level, double x, double y, double z) {
-        // Check a column of 4 blocks to be safe against low ceilings
         BlockPos base = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
         for (int i = 0; i < 4; i++) {
             if (!level.getBlockState(base.above(i)).isAir()) return false;
         }
         return true;
+    }
+
+    private static boolean isPartialBlock(ServerLevel level, BlockPos pos) {
+        var shape = level.getBlockState(pos).getCollisionShape(level, pos);
+        if (shape.isEmpty()) return true;
+        try {
+            return shape.bounds().getSize() < 0.9;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static void doWitherImpact(ServerPlayer player) {
@@ -115,7 +124,8 @@ public class HyperionEvents {
         if (lookHit.getType() == HitResult.Type.BLOCK) {
             BlockPos hitBlock = lookHit.getBlockPos();
 
-            if (!level.getBlockState(hitBlock).isSolidRender(level, hitBlock)) {
+            if (isPartialBlock(level, hitBlock)) {
+                // Partial or no-collision block — treat as open space
                 finalX = lookEnd.x;
                 finalY = lookEnd.y;
                 finalZ = lookEnd.z;
