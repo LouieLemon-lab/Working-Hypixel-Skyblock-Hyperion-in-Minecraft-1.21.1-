@@ -101,26 +101,38 @@ public class HyperionEvents {
 
         if (lookHit.getType() == HitResult.Type.BLOCK) {
             BlockPos hitBlock = lookHit.getBlockPos();
-            Direction hitFace = lookHit.getDirection();
 
-            if (hitFace == Direction.DOWN) {
-                finalX = lookHit.getLocation().x;
-                finalY = lookHit.getLocation().y - player.getBbHeight();
-                finalZ = lookHit.getLocation().z;
-            } else if (hitFace == Direction.UP) {
-                finalX = hitBlock.getX() + 0.5;
-                finalZ = hitBlock.getZ() + 0.5;
-                finalY = hitBlock.getY() + 1.0;
-            } else {
-                finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
-                finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
-                finalY = lookHit.getLocation().y;
-
-                // If no room at destination, stay at player's current position
-                if (!hasRoomForPlayer(level, finalX, finalY, finalZ)) {
+            // Treat non-solid blocks like flowers/grass as air
+            if (!level.getBlockState(hitBlock).isSolidRender(level, hitBlock)) {
+                finalX = lookEnd.x;
+                finalY = lookEnd.y;
+                finalZ = lookEnd.z;
+                if (player.getXRot() < -45) {
                     finalX = playerPos.x;
-                    finalY = playerPos.y;
                     finalZ = playerPos.z;
+                }
+            } else {
+                Direction hitFace = lookHit.getDirection();
+
+                if (hitFace == Direction.DOWN) {
+                    finalX = lookHit.getLocation().x;
+                    finalY = lookHit.getLocation().y - player.getBbHeight();
+                    finalZ = lookHit.getLocation().z;
+                } else if (hitFace == Direction.UP) {
+                    finalX = hitBlock.getX() + 0.5;
+                    finalZ = hitBlock.getZ() + 0.5;
+                    finalY = hitBlock.getY() + 1.0;
+                } else {
+                    finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
+                    finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
+                    finalY = lookHit.getLocation().y;
+
+                    // If no room at destination, stay at player's current position
+                    if (!hasRoomForPlayer(level, finalX, finalY, finalZ)) {
+                        finalX = playerPos.x;
+                        finalY = playerPos.y;
+                        finalZ = playerPos.z;
+                    }
                 }
             }
         } else {
