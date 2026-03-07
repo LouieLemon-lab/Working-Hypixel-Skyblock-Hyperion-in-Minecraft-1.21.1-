@@ -12,6 +12,7 @@ import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -94,9 +95,24 @@ public class HyperionEvents {
 
         if (lookHit.getType() == HitResult.Type.BLOCK) {
             BlockPos hitBlock = lookHit.getBlockPos();
-            finalX = hitBlock.getX() + 0.5;
-            finalZ = hitBlock.getZ() + 0.5;
-            finalY = hitBlock.getY() + 1.0;
+            Direction hitFace = lookHit.getDirection();
+
+            if (hitFace == Direction.DOWN) {
+                // Hit the bottom of a block - teleport just below it
+                finalX = lookHit.getLocation().x;
+                finalY = lookHit.getLocation().y - player.getBbHeight();
+                finalZ = lookHit.getLocation().z;
+            } else if (hitFace == Direction.UP) {
+                // Hit the top of a block - stand on it
+                finalX = hitBlock.getX() + 0.5;
+                finalZ = hitBlock.getZ() + 0.5;
+                finalY = hitBlock.getY() + 1.0;
+            } else {
+                // Hit a side face - stand in front of it
+                finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 0.6;
+                finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 0.6;
+                finalY = lookHit.getLocation().y;
+            }
         } else {
             finalX = lookEnd.x;
             finalY = lookEnd.y;
