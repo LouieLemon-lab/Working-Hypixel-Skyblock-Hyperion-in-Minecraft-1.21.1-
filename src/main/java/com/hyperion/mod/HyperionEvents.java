@@ -113,6 +113,16 @@ public class HyperionEvents {
                 finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                 finalY = lookHit.getLocation().y;
             }
+            
+    // Check for headroom and adjust Y downward if needed
+    BlockPos destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
+    while (!level.getBlockState(destPos).isAir() || !level.getBlockState(destPos.above()).isAir()) {
+        finalY -= 1.0;
+        destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
+        if (finalY < playerPos.y - 5) break; // prevent infinite loop
+    }
+}
+            }
         } else {
             finalX = lookEnd.x;
             finalY = lookEnd.y;
