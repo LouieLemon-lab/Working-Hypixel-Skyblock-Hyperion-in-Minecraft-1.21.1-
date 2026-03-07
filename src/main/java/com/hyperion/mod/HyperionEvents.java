@@ -80,7 +80,19 @@ public class HyperionEvents {
     private static boolean hasRoomForPlayer(ServerLevel level, double x, double y, double z) {
         BlockPos feet = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
         BlockPos head = feet.above();
-        return level.getBlockState(feet).isAir() && level.getBlockState(head).isAir();
+        BlockPos above = head.above();
+        return level.getBlockState(feet).isAir()
+            && level.getBlockState(head).isAir()
+            && level.getBlockState(above).isAir();
+    }
+
+    private static boolean isSafeDestination(ServerLevel level, double x, double y, double z) {
+        // Check a column of 4 blocks to be safe against low ceilings
+        BlockPos base = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+        for (int i = 0; i < 4; i++) {
+            if (!level.getBlockState(base.above(i)).isAir()) return false;
+        }
+        return true;
     }
 
     public static void doWitherImpact(ServerPlayer player) {
@@ -127,7 +139,7 @@ public class HyperionEvents {
                     finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                     finalY = lookHit.getLocation().y;
 
-                    if (!hasRoomForPlayer(level, finalX, finalY, finalZ)) {
+                    if (!isSafeDestination(level, finalX, finalY, finalZ)) {
                         finalX = playerPos.x;
                         finalY = playerPos.y;
                         finalZ = playerPos.z;
