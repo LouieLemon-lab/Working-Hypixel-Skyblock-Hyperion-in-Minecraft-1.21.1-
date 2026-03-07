@@ -76,6 +76,12 @@ public class HyperionEvents {
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
     }
 
+    private static boolean hasRoomForPlayer(ServerLevel level, double x, double y, double z) {
+        BlockPos feet = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
+        BlockPos head = feet.above();
+        return level.getBlockState(feet).isAir() && level.getBlockState(head).isAir();
+    }
+
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         ItemStack sword = player.getMainHandItem();
@@ -109,14 +115,13 @@ public class HyperionEvents {
                 finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
                 finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                 finalY = lookHit.getLocation().y;
-            }
 
-            // Check for headroom and adjust Y downward if needed
-            BlockPos destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
-            while (!level.getBlockState(destPos).isAir() || !level.getBlockState(destPos.above()).isAir()) {
-                finalY -= 1.0;
-                destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
-                if (finalY < playerPos.y - 5) break;
+                // If no room at destination, stay at player's current position
+                if (!hasRoomForPlayer(level, finalX, finalY, finalZ)) {
+                    finalX = playerPos.x;
+                    finalY = playerPos.y;
+                    finalZ = playerPos.z;
+                }
             }
         } else {
             finalX = lookEnd.x;
@@ -158,6 +163,7 @@ public class HyperionEvents {
 
         AABB box = new AABB(finalX - 7, finalY - 7, finalZ - 7, finalX + 7, finalY + 7, finalZ + 7);
         for (Entity entity : level.getEntities(player, box)) {
+            if (entity == player) continue;
             if (entity instanceof LivingEntity living) {
                 float dmg = totalDamage;
                 if (entity instanceof WitherBoss || entity instanceof WitherSkeleton) dmg *= 1.25f;
