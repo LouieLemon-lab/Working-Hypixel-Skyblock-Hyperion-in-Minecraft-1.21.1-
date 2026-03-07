@@ -85,16 +85,6 @@ public class HyperionEvents {
         return true;
     }
 
-    private static boolean isPartialBlock(ServerLevel level, BlockPos pos) {
-        var shape = level.getBlockState(pos).getCollisionShape(level, pos);
-        if (shape.isEmpty()) return true;
-        try {
-            return shape.bounds().getSize() < 0.9;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     public static void doWitherImpact(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
         ItemStack sword = player.getMainHandItem();
@@ -114,45 +104,25 @@ public class HyperionEvents {
 
         if (lookHit.getType() == HitResult.Type.BLOCK) {
             BlockPos hitBlock = lookHit.getBlockPos();
+            Direction hitFace = lookHit.getDirection();
 
-            if (isPartialBlock(level, hitBlock)) {
-                // Cast downward from lookEnd to find the floor beneath partial blocks
-                Vec3 downStart = new Vec3(lookEnd.x, lookEnd.y, lookEnd.z);
-                Vec3 downEnd = new Vec3(lookEnd.x, lookEnd.y - 10, lookEnd.z);
-                BlockHitResult downHit = level.clip(new ClipContext(
-                    downStart, downEnd,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-                ));
-                finalX = lookEnd.x;
-                finalZ = lookEnd.z;
-                if (downHit.getType() == HitResult.Type.BLOCK) {
-                    finalY = downHit.getBlockPos().getY() + 1.0;
-                } else {
-                    finalY = lookEnd.y;
-                }
+            if (hitFace == Direction.DOWN) {
+                finalX = lookHit.getLocation().x;
+                finalY = lookHit.getLocation().y - player.getBbHeight();
+                finalZ = lookHit.getLocation().z;
+            } else if (hitFace == Direction.UP) {
+                finalX = hitBlock.getX() + 0.5;
+                finalZ = hitBlock.getZ() + 0.5;
+                finalY = hitBlock.getY() + 1.0;
             } else {
-                Direction hitFace = lookHit.getDirection();
+                finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
+                finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
+                finalY = lookHit.getLocation().y;
 
-                if (hitFace == Direction.DOWN) {
-                    finalX = lookHit.getLocation().x;
-                    finalY = lookHit.getLocation().y - player.getBbHeight();
-                    finalZ = lookHit.getLocation().z;
-                } else if (hitFace == Direction.UP) {
-                    finalX = hitBlock.getX() + 0.5;
-                    finalZ = hitBlock.getZ() + 0.5;
-                    finalY = hitBlock.getY() + 1.0;
-                } else {
-                    finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
-                    finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
-                    finalY = lookHit.getLocation().y;
-
-                    if (!isSafeDestination(level, finalX, finalY, finalZ)) {
-                        finalX = playerPos.x;
-                        finalY = playerPos.y;
-                        finalZ = playerPos.z;
-                    }
+                if (!isSafeDestination(level, finalX, finalY, finalZ)) {
+                    finalX = playerPos.x;
+                    finalY = playerPos.y;
+                    finalZ = playerPos.z;
                 }
             }
         } else {
