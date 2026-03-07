@@ -98,30 +98,25 @@ public class HyperionEvents {
             Direction hitFace = lookHit.getDirection();
 
             if (hitFace == Direction.DOWN) {
-                // Hit the bottom of a block - teleport just below it
                 finalX = lookHit.getLocation().x;
                 finalY = lookHit.getLocation().y - player.getBbHeight();
                 finalZ = lookHit.getLocation().z;
             } else if (hitFace == Direction.UP) {
-                // Hit the top of a block - stand on it
                 finalX = hitBlock.getX() + 0.5;
                 finalZ = hitBlock.getZ() + 0.5;
                 finalY = hitBlock.getY() + 1.0;
             } else {
-                // Hit a side face - stand in front of it
                 finalX = hitBlock.getX() + 0.5 + hitFace.getStepX() * 1.0;
                 finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                 finalY = lookHit.getLocation().y;
             }
-            
-    // Check for headroom and adjust Y downward if needed
-    BlockPos destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
-    while (!level.getBlockState(destPos).isAir() || !level.getBlockState(destPos.above()).isAir()) {
-        finalY -= 1.0;
-        destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
-        if (finalY < playerPos.y - 5) break; // prevent infinite loop
-    }
-}
+
+            // Check for headroom and adjust Y downward if needed
+            BlockPos destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
+            while (!level.getBlockState(destPos).isAir() || !level.getBlockState(destPos.above()).isAir()) {
+                finalY -= 1.0;
+                destPos = new BlockPos((int)finalX, (int)finalY, (int)finalZ);
+                if (finalY < playerPos.y - 5) break;
             }
         } else {
             finalX = lookEnd.x;
