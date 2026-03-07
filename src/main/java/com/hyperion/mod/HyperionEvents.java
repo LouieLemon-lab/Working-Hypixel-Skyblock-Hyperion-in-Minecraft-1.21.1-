@@ -77,15 +77,6 @@ public class HyperionEvents {
         tooltip.add(Component.literal("MYTHIC DUNGEON ITEM").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
     }
 
-    private static boolean hasRoomForPlayer(ServerLevel level, double x, double y, double z) {
-        BlockPos feet = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
-        BlockPos head = feet.above();
-        BlockPos above = head.above();
-        return level.getBlockState(feet).isAir()
-            && level.getBlockState(head).isAir()
-            && level.getBlockState(above).isAir();
-    }
-
     private static boolean isSafeDestination(ServerLevel level, double x, double y, double z) {
         BlockPos base = new BlockPos((int)Math.floor(x), (int)Math.floor(y), (int)Math.floor(z));
         for (int i = 0; i < 4; i++) {
@@ -125,13 +116,21 @@ public class HyperionEvents {
             BlockPos hitBlock = lookHit.getBlockPos();
 
             if (isPartialBlock(level, hitBlock)) {
-                // Partial or no-collision block — treat as open space
+                // Cast downward from lookEnd to find the floor beneath partial blocks
+                Vec3 downStart = new Vec3(lookEnd.x, lookEnd.y, lookEnd.z);
+                Vec3 downEnd = new Vec3(lookEnd.x, lookEnd.y - 10, lookEnd.z);
+                BlockHitResult downHit = level.clip(new ClipContext(
+                    downStart, downEnd,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+                ));
                 finalX = lookEnd.x;
-                finalY = lookEnd.y;
                 finalZ = lookEnd.z;
-                if (player.getXRot() < -45) {
-                    finalX = playerPos.x;
-                    finalZ = playerPos.z;
+                if (downHit.getType() == HitResult.Type.BLOCK) {
+                    finalY = downHit.getBlockPos().getY() + 1.0;
+                } else {
+                    finalY = lookEnd.y;
                 }
             } else {
                 Direction hitFace = lookHit.getDirection();
