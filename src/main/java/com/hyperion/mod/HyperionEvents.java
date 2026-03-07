@@ -8,6 +8,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.WitherSkeleton;
 import net.minecraft.world.item.ItemStack;
@@ -102,7 +103,6 @@ public class HyperionEvents {
         if (lookHit.getType() == HitResult.Type.BLOCK) {
             BlockPos hitBlock = lookHit.getBlockPos();
 
-            // Treat non-solid blocks like flowers/grass as air
             if (!level.getBlockState(hitBlock).isSolidRender(level, hitBlock)) {
                 finalX = lookEnd.x;
                 finalY = lookEnd.y;
@@ -127,7 +127,6 @@ public class HyperionEvents {
                     finalZ = hitBlock.getZ() + 0.5 + hitFace.getStepZ() * 1.0;
                     finalY = lookHit.getLocation().y;
 
-                    // If no room at destination, stay at player's current position
                     if (!hasRoomForPlayer(level, finalX, finalY, finalZ)) {
                         finalX = playerPos.x;
                         finalY = playerPos.y;
@@ -181,7 +180,9 @@ public class HyperionEvents {
                 if (entity instanceof WitherBoss || entity instanceof WitherSkeleton) dmg *= 1.25f;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) dmg += smiteBonus;
                 if (living.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) dmg += baneBonus;
-                living.invulnerableTime = 0;
+                if (living instanceof Mob) {
+                    living.invulnerableTime = 0;
+                }
                 living.hurt(level.damageSources().indirectMagic(player, player), dmg);
             }
         }
